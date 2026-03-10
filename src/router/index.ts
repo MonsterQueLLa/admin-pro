@@ -21,25 +21,31 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '首页', icon: 'HomeFilled' }
       },
       {
-        path: 'users',
+        path: 'images',
+        name: 'ImageManager',
+        component: () => import('@/views/images/index.vue'),
+        meta: { title: '图片管理', icon: 'PictureFilled', permission: 'image:view' }
+      },
+      {
+        path: 'system/users',
         name: 'UserManagement',
         component: () => import('@/views/users/index.vue'),
-        meta: { title: '用户管理', icon: 'UserFilled' }
+        meta: { title: '用户管理', icon: 'UserFilled', permission: 'system:user:view' }
       },
       {
-        path: 'roles',
+        path: 'system/roles',
         name: 'RoleManagement',
         component: () => import('@/views/roles/index.vue'),
-        meta: { title: '角色管理', icon: 'Avatar' }
+        meta: { title: '角色管理', icon: 'Avatar', permission: 'system:role:view' }
       },
       {
-        path: 'permissions',
-        name: 'PermissionManagement',
-        component: () => import('@/views/permissions/index.vue'),
-        meta: { title: '权限管理', icon: 'Lock' }
+        path: 'system/menus',
+        name: 'MenuManagement',
+        component: () => import('@/views/menus/index.vue'),
+        meta: { title: '菜单管理', icon: 'Menu', permission: 'system:menu:view' }
       },
       {
-        path: 'system',
+        path: 'system/settings',
         name: 'SystemSettings',
         component: () => import('@/views/system/index.vue'),
         meta: { title: '系统设置', icon: 'Setting' }
@@ -61,21 +67,18 @@ const router = createRouter({
 
 // 路由守卫
 router.beforeEach((to, from, next) => {
-  // 设置页面标题
   document.title = to.meta.title ? `${to.meta.title} - Admin Pro` : 'Admin Pro'
   
-  // 公开页面直接放行
   if (to.meta.public) {
     next()
     return
   }
   
-  // TODO: 添加登录验证逻辑
-  // const token = localStorage.getItem('token')
-  // if (!token) {
-  //   next('/login')
-  //   return
-  // }
+  const token = localStorage.getItem('token')
+  if (!token) {
+    next('/login')
+    return
+  }
   
   next()
 })

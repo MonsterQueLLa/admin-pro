@@ -1,23 +1,40 @@
-// Pinia Store 示例
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
+import { loginApi, getUserInfoApi } from '@/api/auth'
+import type { LoginParams } from '@/types/auth'
+
+export interface UserInfo {
+  id: string
+  username: string
+  nickname: string
+  avatar: string
+  roles: string[]
+  permissions: string[]
+  isAdmin: boolean
+}
 
 export const useUserStore = defineStore('user', () => {
-  // State
   const token = ref<string>(localStorage.getItem('token') || '')
-  const userInfo = ref<any>(null)
+  const userInfo = ref<UserInfo | null>(null)
 
-  // Getters
-  const isLoggedIn = computed(() => !!token.value)
+  const isLoggedIn = () => !!token.value
 
-  // Actions
   const setToken = (newToken: string) => {
     token.value = newToken
     localStorage.setItem('token', newToken)
   }
 
-  const setUserInfo = (info: any) => {
-    userInfo.value = info
+  const login = async (params: LoginParams) => {
+    const res = await loginApi(params)
+    setToken(res.token)
+    userInfo.value = res.user
+    return res
+  }
+
+  const getUserInfo = async () => {
+    const res = await getUserInfoApi()
+    userInfo.value = res
+    return res
   }
 
   const logout = () => {
@@ -26,12 +43,19 @@ export const useUserStore = defineStore('user', () => {
     localStorage.removeItem('token')
   }
 
+  const hasPermission = (permission: string) => {
+    if (!userInfo.value) return false
+    if (userInfo.value.isAdmin) return true
+    return userInfo.value.permissions.includes(permission)
+  }
+
   return {
     token,
     userInfo,
     isLoggedIn,
-    setToken,
-    setUserInfo,
-    logout
+    login,
+    getUserInfo,
+    logout,
+    hasPermission
   }
 })

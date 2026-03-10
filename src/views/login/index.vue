@@ -1,24 +1,33 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
-const loginForm = ref({
-  username: '',
-  password: ''
+const userStore = useUserStore()
+
+const loginForm = reactive({
+  username: 'admin',
+  password: '123456'
 })
 const loading = ref(false)
 
 const handleLogin = async () => {
-  if (!loginForm.value.username || !loginForm.value.password) {
+  if (!loginForm.username || !loginForm.password) {
+    ElMessage.warning('请输入用户名和密码')
     return
   }
   loading.value = true
-  // TODO: 调用登录 API
-  setTimeout(() => {
-    loading.value = false
+  try {
+    await userStore.login(loginForm)
+    ElMessage.success('登录成功')
     router.push('/')
-  }, 1000)
+  } catch (error) {
+    // 错误已在拦截器处理
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 

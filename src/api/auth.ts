@@ -1,30 +1,17 @@
 import request from '@/utils/request'
-
-export interface LoginParams {
-  username: string
-  password: string
-}
-
-export interface LoginResult {
-  token: string
-  userInfo: {
-    id: number
-    username: string
-    avatar: string
-  }
-}
+import type { LoginParams, LoginResult } from '@/types/auth'
 
 // 登录
-export const login = (data: LoginParams) => {
+export const loginApi = (data: LoginParams) => {
   return request.post<LoginResult>('/auth/login', data)
 }
 
 // 获取用户信息
-export const getUserInfo = () => {
-  return request.get('/auth/userinfo')
+export const getUserInfoApi = () => {
+  return request.get('/auth/info')
 }
 
 // 登出
-export const logout = () => {
+export const logoutApi = () => {
   return request.post('/auth/logout')
 }
