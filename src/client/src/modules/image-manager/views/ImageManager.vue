@@ -11,12 +11,20 @@ const uploadDialogVisible = ref(false)
 const editDialogVisible = ref(false)
 const currentImage = ref<Partial<ImageItem>>({})
 
-// upload预览
-const uploadPreview = ref('')
+// upload 相关状态
+const uploadPreview = ref('')          // 缩略图显示
+const uploadPreviewFull = ref('')      // 用于预览大图
+const uploadFile = ref<File | null>(null)
+const uploadRef = ref<any>(null)
 
 // 编辑时新文件和预览
 const editImageFile = ref<File | null>(null)
 const editImagePreview = ref('')
+// 原始缩略图地址，用于重置
+const originalThumbnail = ref('')
+// 原始大图地址
+const originalFull = ref('')
+const editUploadRef = ref<any>(null)
 
 const searchForm = reactive({
   keyword: '',
@@ -67,21 +75,80 @@ const handleSelectionChange = (selection: ImageItem[]) => {
   selectedIds.value = selection.map(item => item._id)
 }
 
-// 上传
-const handleUpload = async (file: any) => {
+// no thumbnail generation; we'll display full image scaled by CSS
+
+// 上传文件选择回调，只生成预览，不调用接口
+const handleUpload = (file: any) => {
   if (!file || !file.raw) return
-  // 生成本地预览
-  uploadPreview.value = URL.createObjectURL(file.raw)
+  uploadFile.value = file.raw
+  uploadPreviewFull.value = URL.createObjectURL(file.raw)
+  uploadPreview.value = uploadPreviewFull.value
+}
+
+// 提交上传（点击上传按钮后执行）
+const submitUpload = async () => {
+  if (!uploadFile.value) {
+    // 没选文件则弹出选择
+    openUploadPicker()
+    return
+  }
   try {
-    await uploadImageApi(file.raw)
+    await uploadImageApi(uploadFile.value)
     ElMessage.success('上传成功')
     fetchData()
     uploadDialogVisible.value = false
   } catch (error) {
     ElMessage.error('上传失败')
   } finally {
+    uploadFile.value = null
     uploadPreview.value = ''
+    uploadPreviewFull.value && URL.revokeObjectURL(uploadPreviewFull.value)
+    uploadPreviewFull.value = ''
   }
+}
+
+// 打开文件选择
+const openUploadPicker = () => {
+  // ElementPlus upload exposes an input element; click it directly
+  const el = uploadRef.value?.$el as HTMLElement | undefined
+  const input = el?.querySelector('input[type=file]') as HTMLInputElement | null
+  if (input) {
+    input.click()
+  }
+}
+
+// 打开编辑对话框中的选择
+const openEditPicker = () => {
+  const el = editUploadRef.value?.$el as HTMLElement | undefined
+  const input = el?.querySelector('input[type=file]') as HTMLInputElement | null
+  if (input) {
+    input.click()
+  }
+}
+
+// 删除 upload 选择
+const clearUpload = () => {
+  uploadFile.value = null
+  uploadPreview.value = ''
+}
+
+// 修改选择（重新触发文件对话框）
+const triggerUploadChange = () => {
+  clearUpload()
+  // open file picker
+  openUploadPicker()
+}
+
+// 清空编辑选择，恢复原图
+const clearEdit = () => {
+  editImageFile.value = null
+  editImagePreview.value = originalThumbnail.value
+}
+
+// 编辑时重新选图
+const triggerEditChange = () => {
+  clearEdit()
+  openEditPicker()
 }
 
 // 编辑对话框中选择新图片
@@ -95,6 +162,11 @@ const handleEditImageChange = (file: any) => {
 // 编辑
 const handleEdit = (row: ImageItem) => {
   currentImage.value = { ...row }
+  // 初始化编辑图片预览与原图地址
+  originalThumbnail.value = getImageUrl(row.thumbnailPath)
+  originalFull.value = getImageUrl(row.originalPath)
+  editImagePreview.value = originalThumbnail.value
+  editImageFile.value = null
   editDialogVisible.value = true
 }
 
@@ -160,7 +232,10 @@ const handleBatchDelete = async () => {
 // 将相对路径转换为完整 URL（开发环境可能需要代理）
 const getImageUrl = (path: string) => {
   if (!path) return ''
-  const base = import.meta.env.VITE_API_BASE_URL || ''
+  // tsconfig 可能没有 esnext module，这里用 any 绕开类型检查
+  // @ts-ignore
+  const env: any = (import.meta as any).env || {}
+  const base = env.VITE_API_BASE_URL || ''
   // 避免重复的斜杠
   return base.replace(/\/$/, '') + path
 }
@@ -249,7 +324,7 @@ fetchData()
             </el-image>
           </template>
         </el-table-column>
-        <el-table-column prop="title" label="标题" />
+        <el-table-column prop="title" label="标题" width="150"/>
         <el-table-column prop="subjects" label="主角">
           <template #default="{ row }">
             <el-tag v-for="subject in row.subjects" :key="subject" size="small" style="margin-right: 5px">
@@ -258,6 +333,13 @@ fetchData()
           </template>
         </el-table-column>
         <el-table-column prop="type" label="类型" width="100" />
+        <el-table-column prop="date" label="拍摄日期" width="120">
+          <template #default="{ row }">
+            {{ row.date ? new Date(row.date).toLocaleDateString() : '' }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="device" label="设备" width="120" />
+        <el-table-column prop="location" label="地点" width="120" />
         <el-table-column prop="size" label="大小" width="100">
           <template #default="{ row }">
             {{ formatFileSize(row.size) }}
@@ -279,8 +361,8 @@ fetchData()
 
       <!-- 分页 -->
       <el-pagination
-        v-model:current-page="pagination.page"
-        v-model:page-size="pagination.pageSize"
+        :current-page="pagination.page"
+        :page-size="pagination.pageSize"
         :total="pagination.total"
         :page-sizes="[10, 20, 50, 100]"
         layout="total, sizes, prev, pager, next, jumper"
@@ -292,58 +374,80 @@ fetchData()
 
     <!-- 上传对话框 -->
     <el-dialog v-model="uploadDialogVisible" title="上传图片" width="500px">
-      <!-- 图片预览区域 -->
-      <div v-if="uploadPreview" style="text-align:center;margin-bottom:10px;">
-        <img :src="uploadPreview" style="max-width:100%;max-height:200px;border:1px solid #ebeef5;" />
+      <!-- 初始状态和预览状态切换 -->
+      <div v-if="!uploadPreview" class="initial-upload-state">
+        <div class="initial-box" @click="openUploadPicker">
+          点击上传图片
+        </div>
+        <div class="initial-hint">支持JPG/PNG格式，最大5MB</div>
       </div>
+
+      <div v-else class="upload-preview-card">
+        <el-image
+          :src="uploadPreview"
+          fit="contain"
+          class="preview-img"
+          :preview-src-list="[uploadPreviewFull || uploadPreview]"
+          :preview-teleported="true"
+          style="cursor: pointer; max-width:200px; max-height:200px;"
+        />
+        <div class="preview-label">已上传预览</div>
+        <div class="preview-actions">
+          <el-button size="mini" @click="triggerUploadChange">修改图片</el-button>
+          <el-button size="mini" type="danger" @click="clearUpload">删除图片</el-button>
+        </div>
+      </div>
+
+      <!-- 固定上传按钮 -->
+      <div style="text-align: center; margin-top: 10px;">
+        <el-button type="primary" @click="submitUpload">上传</el-button>
+      </div>
+
+      <!-- 隐藏的上传控件，用于触发文件选择 -->
       <el-upload
-        drag
+        ref="uploadRef"
+        style="display: none;"
         action=""
         :auto-upload="false"
         :on-change="handleUpload"
         accept="image/*"
-      >
-        <el-icon class="el-icon--upload"><upload-filled /></el-icon>
-        <div class="el-upload__text">
-          拖拽文件到此处或 <em>点击上传</em>
-        </div>
-        <template #tip>
-          <div class="el-upload__tip">
-            支持 jpg/png/gif/webp 格式，单个文件不超过 10MB
-          </div>
-        </template>
-      </el-upload>
+      />
     </el-dialog>
 
     <!-- 编辑对话框 -->
     <el-dialog v-model="editDialogVisible" title="编辑图片信息" width="600px">
       <el-form :model="currentImage" label-width="80px">
         <el-form-item label="图片">
-          <div style="margin-bottom:10px;">
-            <img
-              v-if="editImagePreview"
-              :src="editImagePreview"
-              style="max-width:100%;max-height:150px;border:1px solid #ebeef5;"
-            />
-            <img
-              v-else-if="currentImage.thumbnailPath"
-              :src="getImageUrl(currentImage.thumbnailPath)"
-              style="max-width:100%;max-height:150px;border:1px solid #ebeef5;"
-            />
+          <div v-if="!editImagePreview" class="initial-upload-state" style="margin-bottom:10px;">
+            <div class="initial-box" @click="openEditPicker">
+              点击上传图片
+            </div>
+            <div class="initial-hint">支持JPG/PNG格式，最大5MB</div>
           </div>
+          <div v-else class="upload-preview-card" style="margin-bottom:10px;">
+            <el-image
+              :src="editImagePreview"
+              fit="contain"
+              class="preview-img"
+              :preview-src-list="[ editImageFile ? editImagePreview : originalFull ]"
+              :preview-teleported="true"
+              style="cursor: pointer; max-width:200px; max-height:200px;"
+            />
+            <div class="preview-label">当前图片</div>
+            <div class="preview-actions">
+              <el-button size="mini" @click="triggerEditChange">修改图片</el-button>
+              <el-button size="mini" type="danger" @click="clearEdit">恢复原图</el-button>
+            </div>
+          </div>
+          <!-- 隐藏编辑上传控件 -->
           <el-upload
-            drag
+            ref="editUploadRef"
+            style="display:none;"
             action=""
             :auto-upload="false"
             :on-change="handleEditImageChange"
             accept="image/*"
-            list-type="picture"
-          >
-            <div class="el-upload__text">拖拽或<em>点击更换</em>图片</div>
-            <template #tip>
-              <div class="el-upload__tip">若不更换则保持当前图片</div>
-            </template>
-          </el-upload>
+          />
         </el-form-item>
         <el-form-item label="标题">
           <el-input v-model="currentImage.title" />
@@ -465,4 +569,53 @@ fetchData()
   transform: scale(1.05);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
 }
+
+/* 上传预览卡片 */
+.upload-preview-card {
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+  padding: 10px;
+  text-align: center;
+  margin-bottom: 10px;
+}
+.upload-preview-card .preview-img {
+  max-width: 100%;
+  max-height: 200px;
+  display: block;
+  margin: 0 auto 5px;
+}
+.upload-preview-card .preview-label {
+  font-size: 14px;
+  color: #606266;
+  margin-bottom: 5px;
+}
+.upload-preview-card .preview-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+/* 初始上传状态 */
+.initial-upload-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 0;
+}
+.initial-upload-state .initial-box {
+  width: 120px;
+  height: 120px;
+  border: 2px dashed #c0c4cc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #909399;
+  cursor: pointer;
+}
+.initial-upload-state .initial-hint {
+  font-size: 12px;
+  color: #909399;
+}
+
 </style>
