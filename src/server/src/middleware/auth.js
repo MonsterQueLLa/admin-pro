@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken'
-import { config } from '../../config/index.js'
+import { config } from '../config/index.js'
 import { response } from '../utils/response.js'
 import { User } from '../models/user.js'
 

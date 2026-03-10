@@ -3,7 +3,7 @@ import { response } from '../utils/response.js'
 import sharp from 'sharp'
 import path from 'path'
 import fs from 'fs'
-import { config } from '../../config/index.js'
+import { config } from '../config/index.js'
 
 // 确保上传目录存在
 const uploadDir = path.join(process.cwd(), config.upload.uploadDir)
@@ -65,8 +65,9 @@ export const uploadImage = async (req, res) => {
     const originalPath = path.join(uploadDir, filename)
     const thumbnailPath = path.join(thumbnailDir, filename)
     
-    // 保存原图
-    fs.renameSync(file.path, originalPath)
+    // 保存原图（使用 copy + unlink 替代 rename，支持跨文件系统）
+    fs.copyFileSync(file.path, originalPath)
+    fs.unlinkSync(file.path)
     
     // 生成缩略图
     const metadata = await sharp(originalPath).metadata()

@@ -10,7 +10,7 @@ import {
   batchDeleteImages
 } from '../controllers/image.js'
 import { authMiddleware, permissionMiddleware } from '../middleware/auth.js'
-import { config } from '../../config/index.js'
+import { config } from '../config/index.js'
 
 const router = Router()
 

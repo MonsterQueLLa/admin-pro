@@ -53,6 +53,12 @@ pandoc "02-技术方案文档.md" -o "02-技术方案文档.docx" \
 2. 确认后进入编码阶段
 3. 或需要补充其他文档（如测试计划、部署手册）
 
+
+
+## 数据库
+
+![1773157203074](C:\Users\Jesen\AppData\Roaming\Typora\typora-user-images\1773157203074.png)
+
 ---
 
 **文档状态**：待审核  

@@ -193,7 +193,20 @@ fetchData()
         <el-table-column type="selection" width="55" />
         <el-table-column label="缩略图" width="120">
           <template #default="{ row }">
-            <el-image :src="row.thumbnailPath" style="width: 80px; height: 80px; object-fit: cover" />
+            <el-image
+              :src="row.thumbnailPath"
+              :preview-src-list="[row.originalPath]"
+              fit="cover"
+              style="width: 80px; height: 80px; border-radius: 4px; cursor: pointer"
+              :preview-teleported="true"
+              hide-on-click-modal
+            >
+              <template #error>
+                <div class="image-error">
+                  <el-icon><Picture /></el-icon>
+                </div>
+              </template>
+            </el-image>
           </template>
         </el-table-column>
         <el-table-column prop="title" label="标题" />
@@ -303,5 +316,82 @@ fetchData()
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.image-error {
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f5f7fa;
+  color: #909399;
+  font-size: 24px;
+}
+
+/* 图片预览自定义样式 */
+:deep(.el-image-viewer__wrapper) {
+  background-color: rgba(0, 0, 0, 0.9);
+  backdrop-filter: blur(10px);
+}
+
+:deep(.el-image-viewer__img) {
+  max-width: 90vw;
+  max-height: 90vh;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+:deep(.el-image-viewer__btn) {
+  color: #fff;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  font-size: 24px;
+  transition: all 0.3s ease;
+}
+
+:deep(.el-image-viewer__btn:hover) {
+  background-color: rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
+}
+
+:deep(.el-image-viewer__close) {
+  top: 20px;
+  right: 20px;
+}
+
+:deep(.el-image-viewer__actions) {
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.6);
+  border-radius: 30px;
+  padding: 10px 20px;
+}
+
+:deep(.el-image-viewer__actions__inner) {
+  color: #fff;
+  font-size: 18px;
+}
+
+:deep(.el-image-viewer__prev) {
+  left: 20px;
+}
+
+:deep(.el-image-viewer__next) {
+  right: 20px;
+}
+
+/* 缩略图悬停效果 */
+:deep(.el-image img) {
+  transition: all 0.3s ease;
+}
+
+:deep(.el-image:hover img) {
+  transform: scale(1.05);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
 }
 </style>
