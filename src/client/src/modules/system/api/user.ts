@@ -1,4 +1,4 @@
-import request from '@/utils/request'
+import request from '@/core/utils/request'
 
 export interface User {
   id: string

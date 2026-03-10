@@ -1,4 +1,4 @@
-import request from './utils/request'
+import request from '../utils/request'
 import type { LoginParams, LoginResult } from './types'
 
 // 登录
