@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getUserListApi, createUserApi, updateUserApi, deleteUserApi, resetPasswordApi, type User, type CreateUserData } from '@/api/user'
-import { getRoleListApi, type Role } from '@/api/role'
+import { getUserListApi, createUserApi, updateUserApi, deleteUserApi, resetPasswordApi, type User, type CreateUserData } from '../api/user'
+import { getRoleListApi, type Role } from '../api/role'
 
 const loading = ref(false)
 const tableData = ref<User[]>([])

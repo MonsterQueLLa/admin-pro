@@ -1,5 +1,5 @@
-import request from '@/utils/request'
-import type { LoginParams, LoginResult } from '@/types/auth'
+import request from './utils/request'
+import type { LoginParams, LoginResult } from './types'
 
 // 登录
 export const loginApi = (data: LoginParams) => {

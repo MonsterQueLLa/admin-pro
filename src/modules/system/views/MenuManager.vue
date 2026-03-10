@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getMenuTreeApi, createMenuApi, updateMenuApi, deleteMenuApi, type Menu } from '@/api/menu'
+import { getMenuTreeApi, createMenuApi, updateMenuApi, deleteMenuApi, type Menu } from '../api/menu'
 
 const loading = ref(false)
 const tableData = ref<Menu[]>([])

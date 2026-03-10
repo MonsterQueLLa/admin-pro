@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getImageListApi, deleteImageApi, batchDeleteImagesApi, uploadImageApi, updateImageApi, type ImageItem } from '@/api/image'
+import { getImageListApi, deleteImageApi, batchDeleteImagesApi, uploadImageApi, updateImageApi, type ImageItem } from '../api/image'
 
 const loading = ref(false)
 const tableData = ref<ImageItem[]>([])
