@@ -44,7 +44,23 @@ export const uploadImageApi = (file: File) => {
 }
 
 // 更新图片信息
-export const updateImageApi = (id: string, data: Partial<ImageItem>) => {
+export const updateImageApi = (
+  id: string,
+  data: Partial<ImageItem>,
+  file?: File
+) => {
+  if (file) {
+    const formData = new FormData()
+    Object.entries(data).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        formData.append(key, value as any)
+      }
+    })
+    formData.append('file', file)
+    return request.put(`/images/${id}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+  }
   return request.put(`/images/${id}`, data)
 }
 

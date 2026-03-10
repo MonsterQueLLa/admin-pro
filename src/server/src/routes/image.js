@@ -41,7 +41,7 @@ router.use(authMiddleware)
 router.get('/', permissionMiddleware('image:view'), getImageList)
 router.post('/upload', permissionMiddleware('image:upload'), upload.single('file'), uploadImage)
 router.get('/:id', permissionMiddleware('image:view'), getImageById)
-router.put('/:id', permissionMiddleware('image:update'), updateImage)
+router.put('/:id', permissionMiddleware('image:update'), upload.single('file'), updateImage)
 router.delete('/:id', permissionMiddleware('image:delete'), deleteImage)
 router.post('/batch-delete', permissionMiddleware('image:delete'), batchDeleteImages)
 

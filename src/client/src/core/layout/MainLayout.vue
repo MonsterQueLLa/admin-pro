@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
+import { useUserStore } from '../store/user'
 
 const route = useRoute()
 const router = useRouter()
+const userStore = useUserStore()
 const isCollapse = ref(false)
 
 // 获取菜单项
@@ -16,9 +18,16 @@ const handleMenuClick = (item: RouteRecordRaw) => {
 }
 
 const handleLogout = () => {
-  // TODO: 清除登录状态
+  userStore.logout()
   router.push('/login')
 }
+
+onMounted(() => {
+  // 获取用户信息
+  if (userStore.token && !userStore.userInfo) {
+    userStore.getUserInfo()
+  }
+})
 </script>
 
 <template>
@@ -64,8 +73,13 @@ const handleLogout = () => {
         <div class="header-right">
           <el-dropdown @command="handleLogout">
             <span class="user-info">
-              <el-avatar :size="32" :icon="UserFilled" />
-              <span class="username">管理员</span>
+              <el-avatar 
+                :size="32" 
+                :src="userStore.userInfo?.avatar" 
+                :icon="UserFilled"
+                fit="cover"
+              />
+              <span class="username">{{ userStore.userInfo?.nickname || '管理员' }}</span>
               <el-icon><ArrowDown /></el-icon>
             </span>
             <template #dropdown>

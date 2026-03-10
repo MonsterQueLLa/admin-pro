@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getImageListApi, deleteImageApi, batchDeleteImagesApi, uploadImageApi, updateImageApi, type ImageItem } from '../api/image'
+import type { ImageItem } from '../api/image'
+import { getImageListApi, deleteImageApi, batchDeleteImagesApi, uploadImageApi, updateImageApi } from '../api/image'
 
 const loading = ref(false)
 const tableData = ref<ImageItem[]>([])
@@ -9,6 +10,13 @@ const selectedIds = ref<string[]>([])
 const uploadDialogVisible = ref(false)
 const editDialogVisible = ref(false)
 const currentImage = ref<Partial<ImageItem>>({})
+
+// upload预览
+const uploadPreview = ref('')
+
+// 编辑时新文件和预览
+const editImageFile = ref<File | null>(null)
+const editImagePreview = ref('')
 
 const searchForm = reactive({
   keyword: '',
@@ -61,6 +69,9 @@ const handleSelectionChange = (selection: ImageItem[]) => {
 
 // 上传
 const handleUpload = async (file: any) => {
+  if (!file || !file.raw) return
+  // 生成本地预览
+  uploadPreview.value = URL.createObjectURL(file.raw)
   try {
     await uploadImageApi(file.raw)
     ElMessage.success('上传成功')
@@ -68,8 +79,18 @@ const handleUpload = async (file: any) => {
     uploadDialogVisible.value = false
   } catch (error) {
     ElMessage.error('上传失败')
+  } finally {
+    uploadPreview.value = ''
   }
 }
+
+// 编辑对话框中选择新图片
+const handleEditImageChange = (file: any) => {
+  if (!file || !file.raw) return
+  editImageFile.value = file.raw
+  editImagePreview.value = URL.createObjectURL(file.raw)
+}
+
 
 // 编辑
 const handleEdit = (row: ImageItem) => {
@@ -80,7 +101,7 @@ const handleEdit = (row: ImageItem) => {
 // 保存编辑
 const handleSaveEdit = async () => {
   try {
-    await updateImageApi(currentImage.value._id!, {
+    const payload: Partial<ImageItem> = {
       title: currentImage.value.title,
       description: currentImage.value.description,
       subjects: currentImage.value.subjects,
@@ -88,9 +109,20 @@ const handleSaveEdit = async () => {
       date: currentImage.value.date,
       device: currentImage.value.device,
       location: currentImage.value.location
-    })
+    }
+
+    if (editImageFile.value) {
+      // 提交带文件的表单
+      await updateImageApi(currentImage.value._id!, payload, editImageFile.value)
+    } else {
+      await updateImageApi(currentImage.value._id!, payload)
+    }
+
     ElMessage.success('更新成功')
     editDialogVisible.value = false
+    // 重置编辑状态
+    editImageFile.value = null
+    editImagePreview.value = ''
     fetchData()
   } catch (error) {
     ElMessage.error('更新失败')
@@ -123,6 +155,14 @@ const handleBatchDelete = async () => {
   } catch (error) {
     // 取消删除
   }
+}
+
+// 将相对路径转换为完整 URL（开发环境可能需要代理）
+const getImageUrl = (path: string) => {
+  if (!path) return ''
+  const base = import.meta.env.VITE_API_BASE_URL || ''
+  // 避免重复的斜杠
+  return base.replace(/\/$/, '') + path
 }
 
 // 分页
@@ -194,8 +234,8 @@ fetchData()
         <el-table-column label="缩略图" width="120">
           <template #default="{ row }">
             <el-image
-              :src="row.thumbnailPath"
-              :preview-src-list="[row.originalPath]"
+              :src="getImageUrl(row.thumbnailPath)"
+              :preview-src-list="[getImageUrl(row.originalPath)]"
               fit="cover"
               style="width: 80px; height: 80px; border-radius: 4px; cursor: pointer"
               :preview-teleported="true"
@@ -252,6 +292,10 @@ fetchData()
 
     <!-- 上传对话框 -->
     <el-dialog v-model="uploadDialogVisible" title="上传图片" width="500px">
+      <!-- 图片预览区域 -->
+      <div v-if="uploadPreview" style="text-align:center;margin-bottom:10px;">
+        <img :src="uploadPreview" style="max-width:100%;max-height:200px;border:1px solid #ebeef5;" />
+      </div>
       <el-upload
         drag
         action=""
@@ -274,6 +318,33 @@ fetchData()
     <!-- 编辑对话框 -->
     <el-dialog v-model="editDialogVisible" title="编辑图片信息" width="600px">
       <el-form :model="currentImage" label-width="80px">
+        <el-form-item label="图片">
+          <div style="margin-bottom:10px;">
+            <img
+              v-if="editImagePreview"
+              :src="editImagePreview"
+              style="max-width:100%;max-height:150px;border:1px solid #ebeef5;"
+            />
+            <img
+              v-else-if="currentImage.thumbnailPath"
+              :src="getImageUrl(currentImage.thumbnailPath)"
+              style="max-width:100%;max-height:150px;border:1px solid #ebeef5;"
+            />
+          </div>
+          <el-upload
+            drag
+            action=""
+            :auto-upload="false"
+            :on-change="handleEditImageChange"
+            accept="image/*"
+            list-type="picture"
+          >
+            <div class="el-upload__text">拖拽或<em>点击更换</em>图片</div>
+            <template #tip>
+              <div class="el-upload__tip">若不更换则保持当前图片</div>
+            </template>
+          </el-upload>
+        </el-form-item>
         <el-form-item label="标题">
           <el-input v-model="currentImage.title" />
         </el-form-item>

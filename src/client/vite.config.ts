@@ -12,7 +12,20 @@ export default defineConfig({
   },
   server: {
     port: 3000,
-    open: true
+    open: true,
+    proxy: {
+      // forward API calls during development
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, '/api/v1')
+      },
+      // serve uploaded images from backend
+      '/uploads': {
+        target: 'http://localhost:3001',
+        changeOrigin: true
+      }
+    }
   },
   build: {
     outDir: 'dist',

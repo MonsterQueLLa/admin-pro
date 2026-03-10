@@ -112,17 +112,50 @@ export const getImageById = async (req, res) => {
 export const updateImage = async (req, res) => {
   try {
     const { title, description, subjects, type, date, device, location } = req.body
-    
+    const updateFields = { title, description, subjects, type, date, device, location }
+
+    // 如果上传了新文件，则替换原图/缩略图并删除旧文件
+    if (req.file) {
+      const file = req.file
+      const filename = `${Date.now()}-${Math.random().toString(36).substring(7)}${path.extname(file.originalname)}`
+      const originalPath = path.join(uploadDir, filename)
+      const thumbnailPath = path.join(thumbnailDir, filename)
+
+      // 保存新文件
+      fs.copyFileSync(file.path, originalPath)
+      fs.unlinkSync(file.path)
+      const metadata = await sharp(originalPath).metadata()
+      await sharp(originalPath)
+        .resize(300, 300, { fit: 'inside' })
+        .toFile(thumbnailPath)
+
+      updateFields.originalPath = `/uploads/${filename}`
+      updateFields.thumbnailPath = `/uploads/thumbnails/${filename}`
+      updateFields.size = file.size
+      updateFields.width = metadata.width
+      updateFields.height = metadata.height
+      updateFields.format = metadata.format
+
+      // 删除旧文件
+      const oldImage = await Image.findById(req.params.id)
+      if (oldImage) {
+        const oldOriginal = path.join(process.cwd(), oldImage.originalPath)
+        const oldThumb = path.join(process.cwd(), oldImage.thumbnailPath)
+        if (fs.existsSync(oldOriginal)) fs.unlinkSync(oldOriginal)
+        if (fs.existsSync(oldThumb)) fs.unlinkSync(oldThumb)
+      }
+    }
+
     const image = await Image.findByIdAndUpdate(
       req.params.id,
-      { title, description, subjects, type, date, device, location },
+      updateFields,
       { new: true }
     )
-    
+
     if (!image) {
       return response.error(res, '图片不存在', 404)
     }
-    
+
     response.success(res, image, '更新成功')
   } catch (error) {
     response.error(res, error.message)
