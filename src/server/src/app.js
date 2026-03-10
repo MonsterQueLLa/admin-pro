@@ -10,6 +10,10 @@ import userRoutes from './routes/user.js'
 import roleRoutes from './routes/role.js'
 import menuRoutes from './routes/menu.js'
 import imageRoutes from './routes/image.js'
+import logRoutes from './routes/log.js'
+
+// 导入日志中间件
+import { logMiddleware } from './middleware/log.js'
 
 const app = express()
 
@@ -21,6 +25,9 @@ app.use(cors())
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
+// 日志中间件
+app.use(logMiddleware)
+
 // 静态文件
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')))
 
@@ -30,6 +37,7 @@ app.use('/api/v1/users', userRoutes)
 app.use('/api/v1/roles', roleRoutes)
 app.use('/api/v1/menus', menuRoutes)
 app.use('/api/v1/images', imageRoutes)
+app.use('/api/v1/logs', logRoutes)
 
 // 健康检查
 app.get('/health', (req, res) => {

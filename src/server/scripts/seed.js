@@ -29,7 +29,8 @@ const menus = await Menu.insertMany([
   { name: '系统管理', path: '/system', icon: 'Setting', type: 'directory', sort: 3 },
   { name: '用户管理', path: '/system/users', component: 'users/index', type: 'menu', permission: 'system:user:view', sort: 1, parentId: null },
   { name: '角色管理', path: '/system/roles', component: 'roles/index', type: 'menu', permission: 'system:role:view', sort: 2, parentId: null },
-  { name: '菜单管理', path: '/system/menus', component: 'menus/index', type: 'menu', permission: 'system:menu:view', sort: 3, parentId: null }
+  { name: '菜单管理', path: '/system/menus', component: 'menus/index', type: 'menu', permission: 'system:menu:view', sort: 3, parentId: null },
+  { name: '操作日志', path: '/system/logs', component: 'logs/index', type: 'menu', permission: 'system:log:view', sort: 4, parentId: null }
 ])
 
 // 更新父菜单ID
@@ -41,7 +42,7 @@ await Menu.updateMany(
   { parentId: imageDir._id }
 )
 await Menu.updateMany(
-  { name: { $in: ['用户管理', '角色管理', '菜单管理'] } },
+  { name: { $in: ['用户管理', '角色管理', '菜单管理', '操作日志'] } },
   { parentId: systemDir._id }
 )
 
