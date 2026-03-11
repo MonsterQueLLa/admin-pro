@@ -19,7 +19,7 @@ if (!fs.existsSync(thumbnailDir)) {
 // 获取图片列表
 export const getImageList = async (req, res) => {
   try {
-    const { page = 1, pageSize = 20, subjects, type, keyword } = req.query
+    const { page = 1, pageSize = 20, subjects, type, keyword, date, device, location } = req.query
     
     const query = {}
     
@@ -33,6 +33,21 @@ export const getImageList = async (req, res) => {
     }
     if (type) {
       query.type = type
+    }
+    if (device) {
+      query.device = { $regex: device, $options: 'i' }
+    }
+    if (location) {
+      query.location = { $regex: location, $options: 'i' }
+    }
+    if (date) {
+      // 支持传入 YYYY-MM-DD 格式，查询当天所有图片
+      const d = new Date(date)
+      if (!isNaN(d.getTime())) {
+        const start = new Date(d.setHours(0, 0, 0, 0))
+        const end = new Date(d.setHours(23, 59, 59, 999))
+        query.date = { $gte: start, $lte: end }
+      }
     }
     if (keyword) {
       query.$or = [
@@ -61,6 +76,17 @@ export const uploadImage = async (req, res) => {
     }
     
     const file = req.file
+    // derive title from original name (strip extension)
+    const title = file.originalname.replace(path.extname(file.originalname), '')
+
+    // 校验标题唯一性
+    const exist = await Image.findOne({ title })
+    if (exist) {
+      // 删除临时文件
+      fs.unlinkSync(file.path)
+      return response.error(res, '标题已存在', 400)
+    }
+
     const filename = `${Date.now()}-${Math.random().toString(36).substring(7)}${path.extname(file.originalname)}`
     const originalPath = path.join(uploadDir, filename)
     const thumbnailPath = path.join(thumbnailDir, filename)
@@ -77,7 +103,7 @@ export const uploadImage = async (req, res) => {
     
     // 保存到数据库
     const image = new Image({
-      title: file.originalname.replace(path.extname(file.originalname), ''),
+      title,
       originalPath: `/uploads/${filename}`,
       thumbnailPath: `/uploads/thumbnails/${filename}`,
       size: file.size,
@@ -91,6 +117,10 @@ export const uploadImage = async (req, res) => {
     await image.save()
     response.success(res, image, '上传成功')
   } catch (error) {
+    // 处理唯一索引冲突
+    if (error.code === 11000 && error.keyPattern && error.keyPattern.title) {
+      return response.error(res, '标题已存在', 400)
+    }
     response.error(res, error.message)
   }
 }
@@ -113,6 +143,14 @@ export const updateImage = async (req, res) => {
   try {
     const { title, description, subjects, type, date, device, location } = req.body
     const updateFields = { title, description, subjects, type, date, device, location }
+
+    // 若有尝试修改标题，先做唯一性检查。前端现在禁用了此项，但后端仍需保护。
+    if (title) {
+      const exist = await Image.findOne({ title, _id: { $ne: req.params.id } })
+      if (exist) {
+        return response.error(res, '标题已存在', 400)
+      }
+    }
 
     // 如果上传了新文件，则替换原图/缩略图并删除旧文件
     if (req.file) {

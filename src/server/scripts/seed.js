@@ -23,7 +23,8 @@ const menus = await Menu.insertMany([
   
   // 图片管理
   { name: '图片管理', path: '/images', icon: 'PictureFilled', type: 'directory', sort: 2 },
-  { name: '图片列表', path: '/images/list', component: 'images/index', type: 'menu', permission: 'image:view', sort: 1, parentId: null },
+  { name: '图片列表', path: '/images', component: 'images/index', type: 'menu', permission: 'image:view', sort: 1, parentId: null },
+  { name: '图片预览', path: '/images/preview', component: 'images/preview', type: 'menu', permission: 'image:view', sort: 2, parentId: null },
   
   // 系统管理
   { name: '系统管理', path: '/system', icon: 'Setting', type: 'directory', sort: 3 },
@@ -38,7 +39,7 @@ const imageDir = menus.find(m => m.name === '图片管理')
 const systemDir = menus.find(m => m.name === '系统管理')
 
 await Menu.updateMany(
-  { name: { $in: ['图片列表'] } },
+  { name: { $in: ['图片列表','图片预览'] } },
   { parentId: imageDir._id }
 )
 await Menu.updateMany(

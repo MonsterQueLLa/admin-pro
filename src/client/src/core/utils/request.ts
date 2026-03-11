@@ -28,7 +28,29 @@ request.interceptors.response.use(
       ElMessage.error(data.message || '请求失败')
       return Promise.reject(new Error(data.message))
     }
-    return data.data
+    // 自动为图片路径添加基础 URL——遍历响应对象
+    const fixImageUrl = (obj: any) => {
+      if (!obj || typeof obj !== 'object') return
+      if (obj.originalPath) {
+        obj.originalPath = getImageUrl(obj.originalPath)
+      }
+      if (obj.thumbnailPath) {
+        obj.thumbnailPath = getImageUrl(obj.thumbnailPath)
+      }
+      for (const key in obj) {
+        fixImageUrl(obj[key])
+      }
+    }
+    const getImageUrl = (path: string) => {
+      if (!path) return ''
+      // @ts-ignore
+      const env: any = (import.meta as any).env || {}
+      const base = env.VITE_API_BASE_URL || ''
+      return base.replace(/\/$/, '') + path
+    }
+    const result = data.data
+    fixImageUrl(result)
+    return result
   },
   (error) => {
     const { response } = error

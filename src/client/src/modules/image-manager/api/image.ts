@@ -25,6 +25,9 @@ export interface ImageParams {
   keyword?: string
   subjects?: string
   type?: string
+  date?: string        // YYYY-MM-DD
+  device?: string
+  location?: string
 }
 
 // 获取图片列表

@@ -356,6 +356,7 @@ const permissions = {
 │  🌐 Admin Pro                              [🔔] [👤] 管理员 ▼ │  ← Header
 ├──────────┬──────────────────────────────────────────────────┤
 │          │  📍 首页 / 图片管理 / 图片列表                      │  ← Breadcrumb
+│          │  📍 首页 / 图片管理 / 图片预览                      │  ← Breadcrumb
 │  🏠 首页   ├──────────────────────────────────────────────────┤
 │          │                                                  │
 │  📊 数据   │  ┌──────────────────────────────────────────┐  │
@@ -621,10 +622,19 @@ Authorization: Bearer {token}
 ```http
 ### 获取图片列表
 GET /api/v1/images?page=1&pageSize=20&subjects=张三&type=风景
+
+可额外使用以下参数进行筛选：
+- `date=YYYY-MM-DD` 根据拍摄日期
+- `device` 设备名模糊匹配
+- `location` 地点模糊匹配
+
+图片预览页面支持三种展示模式：网格、瀑布流和 3D 轮播；轮播具备类似封面流的立体效果，点击可切换，支持缩放和拖动查看大图。
 Authorization: Bearer {token}
 
 ### 上传图片
 POST /api/v1/images/upload
+
+> 上传时根据文件名生成图片标题，系统中不允许存在重复标题，相同标题会被拒绝。
 Authorization: Bearer {token}
 Content-Type: multipart/form-data
 

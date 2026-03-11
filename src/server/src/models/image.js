@@ -3,7 +3,9 @@ import mongoose from 'mongoose'
 const imageSchema = new mongoose.Schema({
   title: {
     type: String,
-    default: ''
+    default: '',
+    unique: true,               // ensure each image title is unique
+    index: true
   },
   description: {
     type: String,
@@ -59,5 +61,8 @@ const imageSchema = new mongoose.Schema({
 }, {
   timestamps: true
 })
+
+// 强制在数据库层面创建唯一索引，避免并发写入时重复标题
+imageSchema.index({ title: 1 }, { unique: true })
 
 export const Image = mongoose.model('Image', imageSchema)

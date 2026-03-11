@@ -7,6 +7,7 @@ export interface User {
   email: string
   phone: string
   status: number
+  roleIds?: string[]        // for form binding
   roles: { id: string; name: string; code: string }[]
   createdAt: string
 }

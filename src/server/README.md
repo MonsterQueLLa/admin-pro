@@ -84,8 +84,8 @@ npm start
 
 ### 图片管理
 
-- `GET /api/v1/images` - 获取图片列表
-- `POST /api/v1/images/upload` - 上传图片
+- `GET /api/v1/images` - 获取图片列表（支持 subjects, type, keyword 以及 date/device/location 过滤）。该接口也用于“图片预览”页面，预览端提供多种模式并支持缩放/拖动。
+- `POST /api/v1/images/upload` - 上传图片（服务器会根据原始文件名生成标题，标题必须唯一，重复时会返回 400 错误；单文件最大 20MB）
 - `GET /api/v1/images/:id` - 获取图片详情
 - `PUT /api/v1/images/:id` - 更新图片信息
 - `DELETE /api/v1/images/:id` - 删除图片

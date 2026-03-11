@@ -9,7 +9,7 @@ export const config = {
   
   // 文件上传配置
   upload: {
-    maxFileSize: 10 * 1024 * 1024, // 10MB
+    maxFileSize: 20 * 1024 * 1024, // 20MB (formerly 10MB)
     allowedTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
     uploadDir: 'uploads'
   }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { ImageItem } from '../api/image'
 import { getImageListApi, deleteImageApi, batchDeleteImagesApi, uploadImageApi, updateImageApi } from '../api/image'
@@ -14,8 +14,15 @@ const currentImage = ref<Partial<ImageItem>>({})
 // upload 相关状态
 const uploadPreview = ref('')          // 缩略图显示
 const uploadPreviewFull = ref('')      // 用于预览大图
-const uploadFile = ref<File | null>(null)
+const uploadFiles = ref<File[]>([])
 const uploadRef = ref<any>(null)
+
+// 当用户选择文件时自动提取标题（不包括扩展名）
+const uploadTitle = computed(() => {
+  if (uploadFiles.value.length === 0) return ''
+  // show first file's derived title
+  return uploadFiles.value[0].name.replace(/\.[^/.]+$/, '')
+})
 
 // 编辑时新文件和预览
 const editImageFile = ref<File | null>(null)
@@ -23,7 +30,7 @@ const editImagePreview = ref('')
 // 原始缩略图地址，用于重置
 const originalThumbnail = ref('')
 // 原始大图地址
-const originalFull = ref('')
+const originalFull = ref('') 
 const editUploadRef = ref<any>(null)
 
 const searchForm = reactive({
@@ -77,34 +84,49 @@ const handleSelectionChange = (selection: ImageItem[]) => {
 
 // no thumbnail generation; we'll display full image scaled by CSS
 
-// 上传文件选择回调，只生成预览，不调用接口
+// 上传文件选择回调，支持多选，生成预览与列表
 const handleUpload = (file: any) => {
   if (!file || !file.raw) return
-  uploadFile.value = file.raw
-  uploadPreviewFull.value = URL.createObjectURL(file.raw)
-  uploadPreview.value = uploadPreviewFull.value
+  const f: File = file.raw
+  uploadFiles.value.push(f)
+  // set preview to first
+  if (uploadFiles.value.length === 1) {
+    uploadPreviewFull.value = URL.createObjectURL(f)
+    uploadPreview.value = uploadPreviewFull.value
+  }
 }
 
 // 提交上传（点击上传按钮后执行）
 const submitUpload = async () => {
-  if (!uploadFile.value) {
-    // 没选文件则弹出选择
+  if (uploadFiles.value.length === 0) {
     openUploadPicker()
     return
   }
-  try {
-    await uploadImageApi(uploadFile.value)
-    ElMessage.success('上传成功')
-    fetchData()
-    uploadDialogVisible.value = false
-  } catch (error) {
-    ElMessage.error('上传失败')
-  } finally {
-    uploadFile.value = null
-    uploadPreview.value = ''
-    uploadPreviewFull.value && URL.revokeObjectURL(uploadPreviewFull.value)
-    uploadPreviewFull.value = ''
+  // sequentially upload
+  for (const file of uploadFiles.value) {
+    const title = file.name.replace(/\.[^/.]+$/, '')
+    try {
+      const res = await getImageListApi({ keyword: title, pageSize: 1 })
+      if (res.list.some(img => img.title === title)) {
+        ElMessage.error(`名称 ${title} 已存在，跳过`)
+        continue
+      }
+    } catch {}
+    try {
+      await uploadImageApi(file)
+    } catch (error) {
+      const msg = error?.response?.data?.message || '上传失败'
+      ElMessage.error(`${title} 上传失败: ${msg}`)
+    }
   }
+  ElMessage.success('批量上传完成')
+  fetchData()
+  uploadDialogVisible.value = false
+  // clear
+  uploadFiles.value = []
+  uploadPreview.value = ''
+  uploadPreviewFull.value && URL.revokeObjectURL(uploadPreviewFull.value)
+  uploadPreviewFull.value = ''
 }
 
 // 打开文件选择
@@ -128,8 +150,10 @@ const openEditPicker = () => {
 
 // 删除 upload 选择
 const clearUpload = () => {
-  uploadFile.value = null
+  uploadFiles.value = []
   uploadPreview.value = ''
+  uploadPreviewFull.value && URL.revokeObjectURL(uploadPreviewFull.value)
+  uploadPreviewFull.value = ''
 }
 
 // 修改选择（重新触发文件对话框）
@@ -325,6 +349,7 @@ fetchData()
           </template>
         </el-table-column>
         <el-table-column prop="title" label="标题" width="150"/>
+        <el-table-column prop="description" label="描述" width="200"/>
         <el-table-column prop="subjects" label="主角">
           <template #default="{ row }">
             <el-tag v-for="subject in row.subjects" :key="subject" size="small" style="margin-right: 5px">
@@ -379,10 +404,13 @@ fetchData()
         <div class="initial-box" @click="openUploadPicker">
           点击上传图片
         </div>
-        <div class="initial-hint">支持JPG/PNG格式，最大5MB</div>
+        <div class="initial-hint">支持JPG/PNG格式，最大20MB</div>
       </div>
 
       <div v-else class="upload-preview-card">
+        <div style="margin-bottom:6px;">
+          已选择 {{ uploadFiles.length }} 张图片
+        </div>
         <el-image
           :src="uploadPreview"
           fit="contain"
@@ -400,6 +428,9 @@ fetchData()
 
       <!-- 固定上传按钮 -->
       <div style="text-align: center; margin-top: 10px;">
+        <div v-if="uploadTitle" style="margin-bottom: 6px; color: #606266; font-size: 14px;">
+          标题：<strong>{{ uploadTitle }}</strong>（不可修改）
+        </div>
         <el-button type="primary" @click="submitUpload">上传</el-button>
       </div>
 
@@ -411,6 +442,7 @@ fetchData()
         :auto-upload="false"
         :on-change="handleUpload"
         accept="image/*"
+        multiple
       />
     </el-dialog>
 
@@ -422,7 +454,7 @@ fetchData()
             <div class="initial-box" @click="openEditPicker">
               点击上传图片
             </div>
-            <div class="initial-hint">支持JPG/PNG格式，最大5MB</div>
+            <div class="initial-hint">支持JPG/PNG格式，最大20MB</div>
           </div>
           <div v-else class="upload-preview-card" style="margin-bottom:10px;">
             <el-image
@@ -450,7 +482,8 @@ fetchData()
           />
         </el-form-item>
         <el-form-item label="标题">
-          <el-input v-model="currentImage.title" />
+          <!-- title is immutable according to requirements -->
+          <el-input v-model="currentImage.title" disabled />
         </el-form-item>
         <el-form-item label="描述">
           <el-input v-model="currentImage.description" type="textarea" :rows="3" />

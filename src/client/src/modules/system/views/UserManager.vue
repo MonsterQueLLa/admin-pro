@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getUserListApi, createUserApi, updateUserApi, deleteUserApi, resetPasswordApi, type User, type CreateUserData } from '../api/user'
-import { getRoleListApi, type Role } from '../api/role'
+import { getUserListApi, createUserApi, updateUserApi, deleteUserApi, resetPasswordApi } from '../api/user'
+import type { User, CreateUserData } from '../api/user'
+import { getRoleListApi } from '../api/role'
+import type { Role } from '../api/role'
 
 const loading = ref(false)
 const tableData = ref<User[]>([])
 const roleList = ref<Role[]>([])
 const dialogVisible = ref(false)
 const dialogTitle = ref('新增用户')
-const formRef = ref()
+const formRef = ref<any>(null)
 const isEdit = ref(false)
 
 const form = reactive<CreateUserData & { id?: string }>({
@@ -48,7 +50,20 @@ const fetchData = async () => {
       pageSize: pagination.pageSize,
       keyword: searchForm.keyword
     })
-    tableData.value = res.list
+    // data returned from server uses `_id` and `roleIds`; normalize here
+    tableData.value = res.list.map(u => {
+      const roles = (u.roleIds || []).map((r: any) => ({
+        id: r._id || r.id,
+        name: r.name,
+        code: r.code
+      }))
+      return {
+        ...u,
+        id: u._id || u.id,
+        roles,
+        roleIds: (u.roleIds || []).map((r: any) => r._id || r.id)
+      }
+    })
     pagination.total = res.pagination.total
   } finally {
     loading.value = false
@@ -93,7 +108,7 @@ const handleEdit = (row: User) => {
     nickname: row.nickname,
     email: row.email,
     phone: row.phone,
-    roleIds: row.roles.map(r => r.id),
+    roleIds: row.roleIds || [],
     status: row.status
   })
   dialogVisible.value = true
@@ -210,8 +225,8 @@ fetchRoles()
       </el-table>
 
       <el-pagination
-        v-model:current-page="pagination.page"
-        v-model:page-size="pagination.pageSize"
+        :current-page="pagination.page"
+        :page-size="pagination.pageSize"
         :total="pagination.total"
         :page-sizes="[10, 20, 50]"
         layout="total, sizes, prev, pager, next"
