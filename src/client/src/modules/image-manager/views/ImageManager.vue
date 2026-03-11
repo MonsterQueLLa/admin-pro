@@ -298,8 +298,8 @@ fetchData()
         <el-form-item label="主角">
           <el-input v-model="searchForm.subjects" placeholder="主角名称" clearable />
         </el-form-item>
-        <el-form-item label="类型">
-          <el-select v-model="searchForm.type" placeholder="请选择" clearable>
+        <el-form-item label="类型" style="width:160px;">
+          <el-select v-model="searchForm.type" placeholder="请选择" clearable style="width:100%;">
             <el-option label="风景" value="风景" />
             <el-option label="人像" value="人像" />
             <el-option label="美食" value="美食" />
