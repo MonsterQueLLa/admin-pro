@@ -63,6 +63,11 @@ const fetchData = async () => {
   }
 }
 
+// 生成当前页所有图片的预览列表（用于上一张/下一张切换）
+const previewList = computed(() => {
+  return tableData.value.map(item => getImageUrl(item.originalPath))
+})
+
 // 搜索
 const handleSearch = () => {
   pagination.page = 1
@@ -181,7 +186,6 @@ const handleEditImageChange = (file: any) => {
   editImageFile.value = file.raw
   editImagePreview.value = URL.createObjectURL(file.raw)
 }
-
 
 // 编辑
 const handleEdit = (row: ImageItem) => {
@@ -331,10 +335,11 @@ fetchData()
       <el-table :data="tableData" v-loading="loading" border @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="55" />
         <el-table-column label="缩略图" width="120">
-          <template #default="{ row }">
+          <template #default="{ row, $index }">
             <el-image
               :src="getImageUrl(row.thumbnailPath)"
-              :preview-src-list="[getImageUrl(row.originalPath)]"
+              :preview-src-list="previewList"
+              :initial-index="$index"
               fit="cover"
               style="width: 80px; height: 80px; border-radius: 4px; cursor: pointer"
               :preview-teleported="true"
